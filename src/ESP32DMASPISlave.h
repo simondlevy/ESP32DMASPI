@@ -10,15 +10,15 @@
 #ifndef ARDUINO_ESP32_DMA_SPI_NAMESPACE_BEGIN
 #define ARDUINO_ESP32_DMA_SPI_NAMESPACE_BEGIN \
     namespace arduino {                       \
-    namespace esp32 {                         \
-        namespace spi {                       \
-            namespace dma {
+        namespace esp32 {                         \
+            namespace spi {                       \
+                namespace dma {
 #endif
 #ifndef ARDUINO_ESP32_DMA_SPI_NAMESPACE_END
 #define ARDUINO_ESP32_DMA_SPI_NAMESPACE_END \
-    }                                       \
-    }                                       \
-    }                                       \
+                }                                       \
+            }                                       \
+        }                                       \
     }
 #endif
 
@@ -34,19 +34,26 @@ class Slave {
 
     spi_slave_interface_config_t if_cfg {
         .spics_io_num = 15,  // HSPI
-        .flags = 0,
-        .queue_size = 3,
-        .mode = SPI_MODE0,
-        .post_setup_cb = spi_slave_setup_done,
-        .post_trans_cb = spi_slave_trans_done,
+            .flags = 0,
+            .queue_size = 3,
+            .mode = SPI_MODE0,
+            .post_setup_cb = spi_slave_setup_done,
+            .post_trans_cb = spi_slave_trans_done,
     };
 
     spi_bus_config_t bus_cfg {
         .mosi_io_num = 13,        // HSPI
         .miso_io_num = 12,        // HSPI
-        .sclk_io_num = 14,        // HSPI
+        .sclk_io_num = 0,        
+        .quadwp_io_num = 14,        // HSPI
+        .quadhd_io_num = 14,        // HSPI
+        .data4_io_num = 0,
+        .data5_io_num = 0,
+        .data6_io_num = 0,
+        .data7_io_num = 0,
         .max_transfer_sz = 4092,  // default: 4092 if DMA enabled, SOC_SPI_MAXIMUM_BUFFER_SIZE if DMA disabled
         .flags = SPICOMMON_BUSFLAG_SLAVE,
+        .intr_flags = 0,
     };
 
     spi_host_device_t host {HSPI_HOST};
@@ -55,7 +62,7 @@ class Slave {
     std::deque<spi_slave_transaction_t> transactions;
     std::deque<uint32_t> results;
 
-public:
+    public:
     // use HSPI or VSPI with default pin assignment
     // VSPI (CS:  5, CLK: 18, MOSI: 23, MISO: 19)
     // HSPI (CS: 15, CLK: 14, MOSI: 13, MISO: 12) -> default
@@ -96,8 +103,8 @@ public:
     bool wait(uint8_t* rx_buf, const uint8_t* tx_buf, const size_t size) {
         if (!transactions.empty()) {
             printf(
-                "[WARN] cannot execute transfer if queued transaction exists. queued transactions = %d\n",
-                transactions.size());
+                    "[WARN] cannot execute transfer if queued transaction exists. queued transactions = %d\n",
+                    transactions.size());
             return 0;
         }
 
@@ -200,7 +207,7 @@ public:
         }
     }
 
-private:
+    private:
     bool initialize(const uint8_t spi_bus) {
         host = (spi_bus == HSPI) ? HSPI_HOST : VSPI_HOST;
         esp_err_t e = spi_slave_initialize(host, &bus_cfg, &if_cfg, dma_chan);
